@@ -1,6 +1,7 @@
 extends Node3D
 
 var timer: Timer = Timer.new()
+var speed_multiplier: float = 1.0
 
 signal player_entered
 
@@ -15,7 +16,7 @@ func _ready():
 
 # warning-ignore:unused_argument
 func _process(delta):
-	global_translate(Vector3(0, 0, 0.25))
+	global_translate(Vector3(0, 0, 0.25 * speed_multiplier))
 
 
 func timer_timeout():

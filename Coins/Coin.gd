@@ -1,6 +1,7 @@
 extends Node3D
 
 var timer: Timer = Timer.new()
+var speed_multiplier: float = 1.0
 
 func _ready():
 	timer.wait_time = 5
@@ -11,7 +12,7 @@ func _ready():
 	add_to_group("coins")
 
 func _process(delta):
-	global_translate(Vector3(0, 0, 0.25))
+	global_translate(Vector3(0, 0, 0.25 * speed_multiplier))
 	rotate_y(5 * delta)
 	
 func timer_timeout():

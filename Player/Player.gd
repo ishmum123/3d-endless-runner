@@ -2,27 +2,34 @@ extends CharacterBody3D
 
 @onready var audio_player: AudioStreamPlayer3D = $AudioStreamPlayer3D
 @onready var animation_player: AnimationPlayer = $Character/AnimationPlayer
-@onready var gui: Control = $gui
+@onready var gui: Control = $CanvasLayer/gui
+@onready var game_over_panel: Panel = $CanvasLayer/gui/game_over_panel
 
 const MOVE_SPEED: float = 8.0
 const JUMP_VELOCITY: float = 8.0  # Jump strength
 const GRAVITY: float = 24.0  # Gravity strength
 const LANES: Array = [-2, 0, 2]  # Lane positions on x-axis
+const DISTANCE_PER_SECOND: float = 3.75  # Calibrated to object movement speed
 
-var starting_point: Vector3 = Vector3.ZERO
-var current_lane: int = 1  # Start at lane index 1 (x = 0)
 var target_lane: int = 1
-
-var is_jumping: bool = false
 var is_dead: bool = false
+
+var coin_count: int = 0
+var time_elapsed: float = 0.0
+var distance_traveled: int = 0
 
 func _ready() -> void:
 	gui.get_node("label").text = "Coins: "
-	starting_point = global_transform.origin
+	$CanvasLayer/gui/game_over_panel/VBoxContainer/restart_button.pressed.connect(_on_restart_pressed)
 
 func _physics_process(delta: float) -> void:
+	if not is_dead:
+		time_elapsed += delta
+		distance_traveled = int(time_elapsed * DISTANCE_PER_SECOND)
+		update_hud()
+
 	var direction: Vector3 = Vector3.ZERO
-	
+
 	# Handle lane switching
 	if Input.is_action_just_pressed("ui_left") and target_lane > 0:
 		target_lane -= 1
@@ -53,15 +60,31 @@ func _physics_process(delta: float) -> void:
 	else:
 		animation_player.play("Run")
 
-	if is_dead:
-		print('dead')
-		is_dead = false
-
-var coin_count: int = 0
 func _on_collision_area_entered(area):
 	var parent = area.get_parent()
 	if parent.is_in_group("coins"):
 		audio_player.play()
 		coin_count += 1
-		gui.get_node("label").text = "Coins: " + str(coin_count)
 		parent.queue_free()
+
+func get_total_score() -> int:
+	return coin_count + distance_traveled
+
+func update_hud() -> void:
+	gui.get_node("label").text = "Score: " + str(get_total_score())
+
+func show_game_over() -> void:
+	var total_score = get_total_score()
+	SaveManager.save_data(total_score)
+
+	# Populate game over UI
+	game_over_panel.get_node("VBoxContainer/score_container/coins_label").text = "Coins: " + str(coin_count)
+	game_over_panel.get_node("VBoxContainer/score_container/distance_label").text = "Distance: " + str(distance_traveled) + " m"
+	game_over_panel.get_node("VBoxContainer/score_container/total_score_label").text = "Total Score: " + str(total_score)
+	game_over_panel.get_node("VBoxContainer/score_container/high_score_label").text = "High Score: " + str(SaveManager.get_high_score())
+
+	game_over_panel.visible = true
+
+func _on_restart_pressed() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()

@@ -30,16 +30,93 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0383425, -0.0230479, 0.036
 stream = ExtResource("3_6lajn")
 volume_db = 12.467
 
-[node name="gui" type="Control" parent="."]
-layout_mode = 3
-anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
 
-[node name="label" type="Label" parent="gui"]
+[node name="gui" type="Control" parent="CanvasLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="label" type="Label" parent="CanvasLayer/gui"]
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 14.0
 text = "Coins: "
+
+[node name="game_over_panel" type="Panel" parent="CanvasLayer/gui"]
+process_mode = 3
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="background" type="ColorRect" parent="CanvasLayer/gui/game_over_panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer/gui/game_over_panel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -250.0
+offset_right = 300.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 30
+
+[node name="title_label" type="Label" parent="CanvasLayer/gui/game_over_panel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 72
+text = "Game Over"
+horizontal_alignment = 1
+
+[node name="score_container" type="VBoxContainer" parent="CanvasLayer/gui/game_over_panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="coins_label" type="Label" parent="CanvasLayer/gui/game_over_panel/VBoxContainer/score_container"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Coins: 0"
+horizontal_alignment = 1
+
+[node name="distance_label" type="Label" parent="CanvasLayer/gui/game_over_panel/VBoxContainer/score_container"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Distance: 0 m"
+horizontal_alignment = 1
+
+[node name="total_score_label" type="Label" parent="CanvasLayer/gui/game_over_panel/VBoxContainer/score_container"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "Total Score: 0"
+horizontal_alignment = 1
+
+[node name="high_score_label" type="Label" parent="CanvasLayer/gui/game_over_panel/VBoxContainer/score_container"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "High Score: 0"
+horizontal_alignment = 1
+
+[node name="restart_button" type="Button" parent="CanvasLayer/gui/game_over_panel/VBoxContainer"]
+custom_minimum_size = Vector2(250, 60)
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "Restart"
 
 [connection signal="area_entered" from="collision_area" to="." method="_on_collision_area_entered"]

@@ -16,6 +16,10 @@ var startz: float = -50.0
 var road_spawnx: Array = [-2, 0, 2]
 var tree_startx: Array = [10, -10]
 
+var difficulty_level: int = 0
+var difficulty_timer: Timer = null
+const DIFFICULTY_INTERVAL: float = 10.0
+
 
 
 func _ready():
@@ -34,12 +38,21 @@ func _ready():
 		startz
 	)
 
+	# Setup difficulty timer
+	difficulty_timer = Timer.new()
+	difficulty_timer.wait_time = DIFFICULTY_INTERVAL
+	difficulty_timer.autostart = true
+	difficulty_timer.timeout.connect(_on_difficulty_timer_timeout)
+	add_child(difficulty_timer)
+
 
 
 func _on_spawn_timer_timeout():
 	randomize()
 	#print("spawned a coin!")
-	spawn_timer.wait_time = randi() % 5 + 1 
+	var min_interval = max(0.4, 1.0 - (difficulty_level * 0.2))
+	var max_interval = max(3.0, 5.0 - (difficulty_level * 0.5))
+	spawn_timer.wait_time = randf_range(min_interval, max_interval) 
 	
 	var random_line_num = randi() % 3
 	var prev_rand_line_n = null
@@ -52,11 +65,12 @@ func _on_spawn_timer_timeout():
 		prev_rand_line_n = random_line_num
 
 		for n in randf_range(4, 10):
-		
+
 			var coin_inst: MeshInstance3D = coin.instantiate()
-	
+
 			add_child(coin_inst)
-	
+			coin_inst.speed_multiplier = get_speed_multiplier()
+
 			coin_inst.global_transform.origin = Vector3(
 				road_spawnx[random_line_num],
 				1.0,
@@ -69,12 +83,16 @@ func _on_spawn_timer_timeout():
 func _on_spawn_obstacle_timer_timeout():
 	randomize()
 	#print("spawned an obstacle!")
-	spawn_obstacle_timer.wait_time = randi() % 5 + 1
-	
+	var min_interval = max(0.4, 1.0 - (difficulty_level * 0.2))
+	var max_interval = max(3.0, 5.0 - (difficulty_level * 0.5))
+	spawn_obstacle_timer.wait_time = randf_range(min_interval, max_interval)
+
 	var random_line_num = randi() % 3
 	var prev_rand_line_n = null
-	
-	var line_count: int = randi() % 4 + 1
+
+	# Increase max line count at higher difficulty
+	var max_lines = 4 if difficulty_level < 3 else 5
+	var line_count: int = randi() % max_lines + 1
 	
 	for i in line_count:
 		while (prev_rand_line_n != null and prev_rand_line_n == random_line_num):
@@ -84,9 +102,10 @@ func _on_spawn_obstacle_timer_timeout():
 		var rock_inst = rock.instantiate()
 # warning-ignore:return_value_discarded
 		rock_inst.player_entered.connect(on_player_entered_rock)
-	
+
 		add_child(rock_inst)
-	
+		rock_inst.speed_multiplier = get_speed_multiplier()
+
 		rock_inst.global_transform.origin = Vector3(
 			road_spawnx[random_line_num],
 			0.0,
@@ -98,6 +117,7 @@ func _on_spawn_obstacle_timer_timeout():
 func _on_road_spawn_timer_timeout():
 	var road_asset = road.instantiate()
 	add_child(road_asset)
+	road_asset.speed_multiplier = get_speed_multiplier()
 	road_asset.global_transform.origin = Vector3(
 		0,
 		0,
@@ -108,6 +128,12 @@ func _on_road_spawn_timer_timeout():
 
 func on_player_entered_rock():
 	player.is_dead = true
-	print("Player died!")
+	player.show_game_over()
 	get_tree().paused = true
+
+func _on_difficulty_timer_timeout() -> void:
+	difficulty_level += 1
+
+func get_speed_multiplier() -> float:
+	return 1.0 + (difficulty_level * 0.1)
 
