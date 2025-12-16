@@ -35,10 +35,12 @@ godot --path . res://Levels/Level.tscn
 - **Space** or **Up Arrow**: Jump
 - **C**: Slide (defined but may not be fully implemented)
 
-**Note:** The game will pause when the player collides with an obstacle. Close the window to exit.
+**Note:** The game will show a game over screen when the player collides with an obstacle. Use the Restart button to replay.
 
 ### Project Structure
 - Main scene: `res://Levels/Level.tscn`
+- Autoload singletons configured in `project.godot`:
+  - `SaveManager`: Manages high score persistence
 - Input mappings configured in `project.godot`:
   - `move_left` (A key)
   - `move_right` (D key)
@@ -58,6 +60,13 @@ godot --path . res://Levels/Level.tscn
 - All spawned objects use the `MovingObject` pattern (move toward player via `global_translate`)
 - Three-lane system: lane positions are `[-2, 0, 2]` on the x-axis
 - Objects spawn at `startz = -50.0` and move forward via individual scripts
+- **Progressive Difficulty System:**
+  - Difficulty increases every 10 seconds via `difficulty_timer`
+  - Speed multiplier increases by 10% per difficulty level: `1.0 + (difficulty_level * 0.1)`
+  - Spawn intervals decrease dynamically:
+    - Minimum interval: `max(0.4, 1.0 - (difficulty_level * 0.2))`
+    - Maximum interval: `max(3.0, 5.0 - (difficulty_level * 0.5))`
+  - All spawned objects (coins, obstacles, roads) receive `speed_multiplier` for synchronized scaling
 
 **Player System (Player/Player.gd)**
 - `CharacterBody3D` with lane-based movement (not free movement)
@@ -66,13 +75,25 @@ godot --path . res://Levels/Level.tscn
   - `MOVE_SPEED: 8.0` (lane switching speed)
   - `JUMP_VELOCITY: 8.0`
   - `GRAVITY: 24.0`
+  - `DISTANCE_PER_SECOND: 3.75` (calibrated to object movement speed)
 - Collision detection via `CollisionArea` that checks for coins group membership
 - Death handled via `is_dead` flag set by Level when player collides with rocks
+- **Score System:**
+  - Tracks `coin_count`, `time_elapsed`, and `distance_traveled`
+  - Total score = coins collected + distance traveled (in meters)
+  - Distance calculated as `time_elapsed * DISTANCE_PER_SECOND`
+  - Score updates in real-time during gameplay
+- **Game Over UI:**
+  - Full-screen overlay with semi-transparent background
+  - Displays: coins collected, distance traveled, total score, and high score
+  - Restart button reloads scene via `get_tree().reload_current_scene()`
+  - UI uses CanvasLayer for proper 2D rendering over 3D scene
 
 **Moving Objects Pattern (Levels/MovingObject.gd)**
 - Base pattern for obstacles (rocks) that move toward player
 - All moving objects:
-  - Move forward via `global_translate(Vector3(0, 0, 0.25))` in `_process()`
+  - Move forward via `global_translate(Vector3(0, 0, 0.25 * speed_multiplier))` in `_process()`
+  - `speed_multiplier` defaults to 1.0 and is set by Level based on current difficulty
   - Auto-destroy after 5 seconds via internal Timer
   - Emit `player_entered` signal on collision with player group
 
@@ -80,7 +101,18 @@ godot --path . res://Levels/Level.tscn
 - Inherit same timer-based destruction pattern as MovingObject
 - Self-rotate via `rotate_y(5 * delta)`
 - Must be in "coins" group for player collision detection
-- Move forward and destroy after 5 seconds
+- Move forward via `global_translate(Vector3(0, 0, 0.25 * speed_multiplier))` and destroy after 5 seconds
+- `speed_multiplier` defaults to 1.0 and is set by Level based on current difficulty
+
+**High Score Persistence (SaveManager.gd)**
+- Autoload singleton that manages high score persistence across sessions
+- Uses Godot's `ConfigFile` API for save data
+- Save location: `user://highscore.cfg`
+- Key methods:
+  - `save_data(score: int)`: Saves score only if it beats current high score
+  - `get_high_score() -> int`: Returns the current high score
+  - `load_data()`: Loads saved data on game start
+- Registered as autoload in `project.godot` under name "SaveManager"
 
 ### Spawning Logic
 
@@ -111,7 +143,9 @@ godot --path . res://Levels/Level.tscn
 ### Scene Hierarchy
 
 - `Levels/Level.tscn`: Main game scene with timers and spawn configuration
-- `Player/Player.tscn`: Character with collision area, audio player, and GUI
+- `Player/Player.tscn`: Character with collision area, audio player, GUI, and game over panel
+  - Contains CanvasLayer with gui Control node for HUD and game over overlay
+  - Game over panel has VBoxContainer with score labels and restart button
 - `Coins/Coin.tscn`: Collectible coin prefab
 - `Levels/Rock/Rock.tscn`: Obstacle prefab (uses MovingObject.gd)
 - `Levels/Road/Road.tscn`: Road segment prefab
@@ -125,8 +159,10 @@ godot --path . res://Levels/Level.tscn
 
 ### Game State
 - Pause game via `get_tree().paused = true` when player dies
-- No restart/game over UI implemented - game simply pauses
-- Coin count displayed via `gui/label` node in Player scene
+- Game over UI displays on death with score breakdown and restart button
+- Score (coins + distance) displayed in real-time via `gui/label` node in Player scene
+- High score is automatically saved when player dies and persists across sessions
+- Restart reloads the current scene via `get_tree().reload_current_scene()`
 
 ### Signal Architecture
 - MovingObject (rocks) emit `player_entered` signal
